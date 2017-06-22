@@ -38,7 +38,12 @@ type Metric struct {
 	Mbean      string
 	Attribute  string
 	Path       string
-	Labels     map[string]string
+	Labels     []Label
+}
+
+type Label struct {
+	Key   string
+	Value string
 }
 
 type JolokiaClient interface {
@@ -321,8 +326,8 @@ func (j *Jolokia2) Gather(acc telegraf.Accumulator) error {
 			}
 
 			if server.Metrics[i].Labels != nil {
-				for key, val := range server.Metrics[i].Labels {
-					tags[key] = val
+				for _, label := range server.Metrics[i].Labels {
+					tags[label.Key] = label.Value
 				}
 			}
 			acc.AddFields(server.Metrics[i].Name, fields, tags)
