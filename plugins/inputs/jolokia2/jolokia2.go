@@ -38,7 +38,7 @@ type Metric struct {
 	Mbean      string
 	Attribute  string
 	Path       string
-	Tags       map[string]string
+	Labels     map[string]string
 }
 
 type JolokiaClient interface {
@@ -320,8 +320,8 @@ func (j *Jolokia2) Gather(acc telegraf.Accumulator) error {
 				acc.AddError(fmt.Errorf("Missing key 'value' in output response\n"))
 			}
 
-			if server.Metrics[i].Tags != nil {
-				for key, val := range server.Metrics[i].Tags {
+			if server.Metrics[i].Labels != nil {
+				for key, val := range server.Metrics[i].Labels {
 					tags[key] = val
 				}
 			}
