@@ -240,7 +240,6 @@ func (j *Jolokia2) extractValues(measurement string, value interface{}, fields m
 }
 
 func (j *Jolokia2) Gather(acc telegraf.Accumulator) error {
-
 	if j.jClient == nil {
 		tr := &http.Transport{ResponseHeaderTimeout: j.ResponseHeaderTimeout.Duration}
 		j.jClient = &JolokiaClientImpl{&http.Client{
@@ -250,7 +249,6 @@ func (j *Jolokia2) Gather(acc telegraf.Accumulator) error {
 	}
 
 	j.analysisURI(acc)
-	fmt.Println("a111", serverInfos)
 	metrics := j.Metrics
 	tags := make(map[string]string)
 
@@ -258,7 +256,6 @@ func (j *Jolokia2) Gather(acc telegraf.Accumulator) error {
 		tags["HostName"] = server.HostName
 		tags["AppName"] = server.AppName
 		tags["URI"] = server.URI
-		fields := make(map[string]interface{})
 
 		req, err := j.prepareRequest(server, metrics)
 		if err != nil {
@@ -276,6 +273,7 @@ func (j *Jolokia2) Gather(acc telegraf.Accumulator) error {
 			continue
 		}
 		for i, resp := range out {
+			fields := make(map[string]interface{})
 			if status, ok := resp["status"]; ok && status != float64(200) {
 				acc.AddError(fmt.Errorf("Not expected status value in response body (%s mbean=\"%s\" attribute=\"%s\"): %3.f",
 					server.URI, metrics[i].Mbean, metrics[i].Attribute, status))
