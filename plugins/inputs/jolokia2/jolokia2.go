@@ -29,13 +29,16 @@ type serverInfo struct {
 	URI      string
 	UserName string
 	Password string
+	Metrics  []Metric
 }
 
 type Metric struct {
-	Name      string
-	Mbean     string
-	Attribute string
-	Path      string
+	ServerName []string
+	Name       string
+	Mbean      string
+	Attribute  string
+	Path       string
+	Tags       map[string]string
 }
 
 type JolokiaClient interface {
@@ -221,6 +224,35 @@ func (j *Jolokia2) analysisURI(acc telegraf.Accumulator) {
 			}
 			serverInfos = append(serverInfos, info)
 		}
+		for _, metric := range j.Metrics {
+			if metric.ServerName == nil || len(metric.ServerName) == 0 {
+				j.addMetric("", "", metric)
+			} else {
+				for _, serverName := range metric.ServerName {
+					si := strings.Split(serverName, "@")
+					if len(si) == 1 {
+						j.addMetric(si[0], "", metric)
+					} else {
+						j.addMetric(si[0], strings.Join(si[1:], "@"), metric)
+					}
+				}
+			}
+		}
+	}
+}
+
+func (j *Jolokia2) addMetric(hostName, appName string, metric Metric) {
+	for i, serverInfo := range serverInfos {
+		if hostName == "" && appName == "" {
+			serverInfos[i].Metrics = append(serverInfos[i].Metrics, metric)
+		} else if hostName == "" && appName != "" && serverInfo.AppName == appName {
+			serverInfos[i].Metrics = append(serverInfos[i].Metrics, metric)
+		} else if hostName != "" && appName == "" && serverInfo.HostName == hostName {
+			serverInfos[i].Metrics = append(serverInfos[i].Metrics, metric)
+		} else if hostName != "" && appName != "" && serverInfo.HostName == hostName && serverInfo.AppName == appName {
+			serverInfos[i].Metrics = append(serverInfos[i].Metrics, metric)
+		}
+
 	}
 }
 
@@ -249,15 +281,13 @@ func (j *Jolokia2) Gather(acc telegraf.Accumulator) error {
 	}
 
 	j.analysisURI(acc)
-	metrics := j.Metrics
-	tags := make(map[string]string)
-
 	for _, server := range serverInfos {
+		tags := make(map[string]string)
 		tags["HostName"] = server.HostName
 		tags["AppName"] = server.AppName
 		tags["URI"] = server.URI
 
-		req, err := j.prepareRequest(server, metrics)
+		req, err := j.prepareRequest(server, server.Metrics)
 		if err != nil {
 			acc.AddError(fmt.Errorf("unable to create request: %s", err))
 			continue
@@ -268,15 +298,16 @@ func (j *Jolokia2) Gather(acc telegraf.Accumulator) error {
 			continue
 		}
 
-		if len(out) != len(metrics) {
-			acc.AddError(fmt.Errorf("did not receive the correct number of metrics in response. expected %d, received %d", len(metrics), len(out)))
+		if len(out) != len(server.Metrics) {
+			acc.AddError(fmt.Errorf("did not receive the correct number of metrics in response. expected %d, received %d", len(server.Metrics), len(out)))
 			continue
 		}
+
 		for i, resp := range out {
 			fields := make(map[string]interface{})
 			if status, ok := resp["status"]; ok && status != float64(200) {
 				acc.AddError(fmt.Errorf("Not expected status value in response body (%s mbean=\"%s\" attribute=\"%s\"): %3.f",
-					server.URI, metrics[i].Mbean, metrics[i].Attribute, status))
+					server.URI, server.Metrics[i].Mbean, server.Metrics[i].Attribute, status))
 				continue
 			} else if !ok {
 				acc.AddError(fmt.Errorf("Missing status in response body"))
@@ -288,7 +319,13 @@ func (j *Jolokia2) Gather(acc telegraf.Accumulator) error {
 			} else {
 				acc.AddError(fmt.Errorf("Missing key 'value' in output response\n"))
 			}
-			acc.AddFields(metrics[i].Name, fields, tags)
+
+			if server.Metrics[i].Tags != nil {
+				for key, val := range server.Metrics[i].Tags {
+					tags[key] = val
+				}
+			}
+			acc.AddFields(server.Metrics[i].Name, fields, tags)
 		}
 	}
 	return nil

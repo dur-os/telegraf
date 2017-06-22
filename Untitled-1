@@ -1,0 +1,28 @@
+SELECT mean("NonHeapMemoryUsage_used") AS "Used", 
+mean("NonHeapMemoryUsage_committed") AS "Committed", 
+mean("NonHeapMemoryUsage_init") AS "Init" FROM "Memory" 
+WHERE $timeFilter 
+GROUP BY time($__interval), "HostName", "AppName" fill(null)
+
+
+
+SELECT mean("HeapMemoryUsage_max") AS "HeapMax",
+ mean("HeapMemoryUsage_used") AS "HeapUsed", 
+ mean("HeapMemoryUsage_committed") AS "HeapCommitted", 
+ mean("HeapMemoryUsage_init") AS "HeapInit" 
+ FROM "Memory" 
+ WHERE $timeFilter 
+ GROUP BY time($__interval), "HostName", "AppName" fill(null)
+
+
+
+ SELECT 
+    mean("TotalStartedThreadCount") AS "启动的线程总数",
+    mean("ThreadCount") AS "活动线程", 
+    mean("PeakThreadCount") AS "峰值", 
+    mean("DaemonThreadCount") AS "守护线程" 
+FROM "ThreadCount" 
+WHERE $timeFilter 
+GROUP BY time($__interval), "HostName", "AppName" fill(null)
+
+$tag_HostName.$tag_AppName.$col

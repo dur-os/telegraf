@@ -189,7 +189,6 @@ func TestHttpJsonBulkResponse(t *testing.T) {
 
 	assert.Nil(t, err)
 	assert.Equal(t, 2, len(acc.Metrics))
-
 	fields := []map[string]interface{}{
 		map[string]interface{}{
 			"init":      67108864.0,
@@ -208,11 +207,11 @@ func TestHttpJsonBulkResponse(t *testing.T) {
 		map[string]string{
 			"HostName": "ECS7",
 			"AppName":  "ydh",
-			"URI":      "127.0.0.1:8080",
+			"URI":      "127.0.0.1:7016",
 		}, map[string]string{
 			"HostName": "ECS7",
 			"AppName":  "ydh",
-			"URI":      "127.0.0.1:8080",
+			"URI":      "127.0.0.1:7016",
 		},
 	}
 	AssertMutiContainsTaggedFields(t, acc, []string{HeapMetric.Name, NonHeapMetric.Name}, fields, tags)
@@ -245,7 +244,7 @@ func TestHttpJsonThreeLevelMultiValue(t *testing.T) {
 	tags := map[string]string{
 		"HostName": "ECS7",
 		"AppName":  "ydh",
-		"URI":      "127.0.0.1:8080",
+		"URI":      "127.0.0.1:7016",
 	}
 	acc.AssertContainsTaggedFields(t, HeapMetric.Name, fields, tags)
 }
@@ -290,6 +289,7 @@ func AssertMutiContainsTaggedFields(
 	a.Lock()
 	defer a.Unlock()
 	for i, p := range a.Metrics {
+		fmt.Println("aaa", p.Tags)
 		if !reflect.DeepEqual(tags[i], p.Tags) {
 			return
 		}
